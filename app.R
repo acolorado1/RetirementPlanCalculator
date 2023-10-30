@@ -110,15 +110,27 @@ server <- function(input, output, session){
   })
   output$barplot <- renderPlot({
     if(input$submitbutton > 0){
-      principal <- isolate(BalanceUponRetirement())
-      interest <- principal*(input$AIR/100)
-      df <- data.frame(Principal = principal, 
+      present.value <- isolate(BalanceUponRetirement())
+      total <- c()
+      for (i in 1:length(present.value)) {
+        s <- sum(present.value[1:i])
+        total <- c(total, c(s))
+      }
+      interest <- total*(input$AIR/100)
+      df <- data.frame(Year = seq(1, input$Y, by = 1),
+                       total = total, 
                        Interest = interest, 
-                       Year = seq(1, input$Y, by = 1))
+                       EmployeeContribution = rep(input$AI*(input$C/100), input$Y), 
+                       CompanyContribution = rep(isolate(BiWeekCompany())*26,input$Y))
       df %>% 
+        mutate(Principal = total - Interest - EmployeeContribution - CompanyContribution) %>% 
+        select(-total) %>% 
         tidyr::gather(-Year, key = "category", value = "value") %>% 
+        mutate(category = factor(category, levels = c("Principal", "Interest", "EmployeeContribution", "CompanyContribution"))) %>% 
         ggplot(aes(x = factor(Year), y = value, fill = category)) + 
           geom_bar(stat = "identity", position = "stack") + 
+          scale_fill_manual(values = c("Principal" = "#00BFCA", "Interest" = "#F8766D", 
+                              "EmployeeContribution" = "#000080", "CompanyContribution" = "#ffd700")) +
           theme_bw() + 
           theme(legend.title = element_blank(), 
                 text = element_text(size = 16)) + 
