@@ -3,6 +3,8 @@
 
 library(shiny)
 library(shinythemes)
+library(ggplot2)
+library(dplyr)
 
 ui <- fluidPage(theme = shinytheme("united"), 
                 navbarPage("Retirement Plan Calculator", 
@@ -35,13 +37,14 @@ ui <- fluidPage(theme = shinytheme("united"),
                              mainPanel(tags$label(h3('Results')), 
                                        tags$head(tags$style(HTML("pre { white-space: pre-wrap; word-break: keep-all; }"))),
                                        htmlOutput("summary"),
+                                       plotOutput("barplot")
                                        # tags$img(
                                        #   src="logo.png", 
                                        #   width = "20%", 
                                        #   style="vertical-align:bottom"
                                        # )
-                                       imageOutput("logo"),
-                                       imageOutput("luci")
+                                       # imageOutput("logo"),
+                                       # imageOutput("luci")
 
                              )
                          ), #tab panel: home 
@@ -53,6 +56,8 @@ ui <- fluidPage(theme = shinytheme("united"),
   )#navbar page 
   
 )# fluid page 
+
+
 
 server <- function(input, output, session){
   # calculate bi-weekly contribution by employee 
@@ -89,6 +94,8 @@ server <- function(input, output, session){
     
   })
   
+  
+  
   output$summary <- renderText({
     if(input$submitbutton > 0){
       str1 <- paste0("Bi-weekly contribution by employee: $", isolate(BiWeekEmployee()))
@@ -96,6 +103,25 @@ server <- function(input, output, session){
       str3 <- paste0("Total Contribution by employee after ", input$Y, " years: $", isolate(TotalEmployee()))
       str4 <- paste0("Balance Upon Retirement: $", sum(isolate(BalanceUponRetirement())))
       HTML(paste(str1, str2, str3, str4, sep = "<br/>"))
+    }
+  })
+  output$barplot <- renderPlot({
+    if(input$submitbutton > 0){
+      principal <- isolate(BalanceUponRetirement())
+      interest <- principal*(input$AIR/100)
+      df <- data.frame(Principal = principal, 
+                       Interest = interest, 
+                       Year = seq(1, input$Y, by = 1))
+      df %>% 
+        #mutate(Total = Principal + Interest) %>% 
+        tidyr::gather(-Year, key = "category", value = "value") %>% 
+        ggplot(aes(x = factor(Year), y = value, fill = category)) + 
+          geom_bar(stat = "identity", position = "stack") + 
+          theme_bw() + 
+          theme(legend.title = element_blank(), 
+                text = element_text(size = 12)) + 
+          ylab("Balance") +
+          xlab("Year")
     }
   })
 }
