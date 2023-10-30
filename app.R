@@ -10,7 +10,7 @@ ui <- fluidPage(theme = shinytheme("united"),
                 navbarPage("Retirement Plan Calculator", 
                            tabPanel("Home", 
                                     fixedRow(
-                                      column(4, offset = 0, 
+                                      column(3, offset = 0, 
                                              sidebarPanel( width = "95%",  
                                                HTML("<h3>Input Your Information</h3>"),
                                                numericInput(inputId = "AI", 
@@ -25,6 +25,12 @@ ui <- fluidPage(theme = shinytheme("united"),
                                                numericInput(inputId = "Y", 
                                                             label = "Years Till Retirement", 
                                                             value = 20), 
+                                               numericInput(inputId = "SI", 
+                                                            label = "Salary Increase (Percent)", 
+                                                            value = 3,
+                                                            min = 0, 
+                                                            max = 100, 
+                                                            step = 0.01),
                                                numericInput(inputId = "AIR", 
                                                             label = "Annual Interest Rate (Percent)", 
                                                             value = 5, 
@@ -38,14 +44,20 @@ ui <- fluidPage(theme = shinytheme("united"),
                                              ), # end side bar
                                              imageOutput("logo")
                                       ), # end column 1
-                                      column(6, offset = 0,
+                                      column(7, offset = 0,
                                              mainPanel(width = "100%",
                                                        tags$label(h3('Results')), 
                                                        htmlOutput("summary"),
-                                                       plotOutput("barplot")
+                                                       htmlOutput("bigoutput"),
+                                                       plotOutput("barplot"),
+                                                       tags$head(tags$style("#bigoutput{
+                                                                            color: red;
+                                                                            font-size: 20px;
+                                                                            font-style: bold;
+                                                       }"))
                                              ) # end main panel 
                                       ), # end column 2 
-                                      column(2, offset = 0,
+                                      column(2, offset = 0, style='padding:0px;',
                                              imageOutput("luci")
                                       ) # end column 3 
                                     ), # end first row 
@@ -98,16 +110,25 @@ server <- function(input, output, session){
   })
   
   
-  
+  # create summary outputs 
   output$summary <- renderText({
     if(input$submitbutton > 0){
       str1 <- paste0("Bi-weekly contribution by employee: $", isolate(BiWeekEmployee()))
       str2 <- paste0("Bi-weekly contribution by company: $", isolate(BiWeekCompany()))
       str3 <- paste0("Total Contribution by employee after ", input$Y, " years: $", isolate(TotalEmployee()))
-      str4 <- paste0("Balance Upon Retirement: $", sum(isolate(BalanceUponRetirement())))
-      HTML(paste(str1, str2, str3, str4, sep = "<br/>"))
+      HTML(paste(str1, str2, str3, sep = "<br/>"))
     }
   })
+  
+  # main output is balance upon retirement 
+  output$bigoutput <- renderText({
+    if(input$submitbutton > 0 ){
+      str1 <- paste0("Balance Upon Retirement: $", sum(isolate(BalanceUponRetirement())))
+      HTML(paste(str1, sep = "<br/>"))
+    }
+  })
+  
+  # generate barplot with increasing balance 
   output$barplot <- renderPlot({
     if(input$submitbutton > 0){
       present.value <- isolate(BalanceUponRetirement())
@@ -130,7 +151,8 @@ server <- function(input, output, session){
         ggplot(aes(x = factor(Year), y = value, fill = category)) + 
           geom_bar(stat = "identity", position = "stack") + 
           scale_fill_manual(values = c("Principal" = "#00BFCA", "Interest" = "#F8766D", 
-                              "EmployeeContribution" = "#000080", "CompanyContribution" = "#ffd700")) +
+                              "EmployeeContribution" = "#000080", "CompanyContribution" = "#ffd700"), 
+                            labels = c("Principal", "Interest", "Employee Contribution", "Company Contribution")) +
           theme_bw() + 
           theme(legend.title = element_blank(), 
                 text = element_text(size = 16)) + 
@@ -143,7 +165,7 @@ server <- function(input, output, session){
   output$luci <- renderImage({
     list(src = "www/Luci2.png",
          contentType = "image/png",
-         width = "100%",
+         width = "120%",
          height = "auto",
          align = "right"
     )
