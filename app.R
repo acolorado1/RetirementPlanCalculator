@@ -9,50 +9,53 @@ library(dplyr)
 ui <- fluidPage(theme = shinytheme("united"), 
                 navbarPage("Retirement Plan Calculator", 
                            tabPanel("Home", 
-                                    sidebarPanel(
-                                      HTML("<h3>Input Your Information</h3>"),
-                                      numericInput(inputId = "AI", 
-                                                   label = "Annual Income", 
-                                                   value = 50000),
-                                      numericInput(inputId = "C", 
-                                                   label = "Employee Bi-Weekly Contribution (Percent of Salary)", 
-                                                   value = 3, 
-                                                   min = 0, 
-                                                   max = 100, 
-                                                   step = 0.1),
-                                      numericInput(inputId = "Y", 
-                                                   label = "Years Till Retirement", 
-                                                   value = 20), 
-                                      numericInput(inputId = "AIR", 
-                                                   label = "Annual Interest Rate (Percent)", 
-                                                   value = 5, 
-                                                   min = 0, 
-                                                   max = 100, 
-                                                   step = 0.01),
-                                      actionButton(
-                                        "submitbutton", 
-                                        "Submit", 
-                                        class="btn btn-primary")
-                                    ), 
-                             mainPanel(tags$label(h3('Results')), 
-                                       tags$head(tags$style(HTML("pre { white-space: pre-wrap; word-break: keep-all; }"))),
-                                       htmlOutput("summary"),
-                                       plotOutput("barplot")
-                                       # tags$img(
-                                       #   src="logo.png", 
-                                       #   width = "20%", 
-                                       #   style="vertical-align:bottom"
-                                       # )
-                                       # imageOutput("logo"),
-                                       # imageOutput("luci")
-
-                             )
+                                    fixedRow(
+                                      column(4, offset = 0, 
+                                             sidebarPanel( width = "95%",  
+                                               HTML("<h3>Input Your Information</h3>"),
+                                               numericInput(inputId = "AI", 
+                                                            label = "Annual Income", 
+                                                            value = 50000),
+                                               numericInput(inputId = "C", 
+                                                            label = "Employee Bi-Weekly Contribution (Percent of Salary)", 
+                                                            value = 3, 
+                                                            min = 0, 
+                                                            max = 100, 
+                                                            step = 0.1),
+                                               numericInput(inputId = "Y", 
+                                                            label = "Years Till Retirement", 
+                                                            value = 20), 
+                                               numericInput(inputId = "AIR", 
+                                                            label = "Annual Interest Rate (Percent)", 
+                                                            value = 5, 
+                                                            min = 0, 
+                                                            max = 100, 
+                                                            step = 0.01),
+                                               actionButton(
+                                                 "submitbutton", 
+                                                 "Submit", 
+                                                 class="btn btn-primary") 
+                                             ), # end side bar
+                                             imageOutput("logo")
+                                      ), # end column 1
+                                      column(6, offset = 0,
+                                             mainPanel(width = "100%",
+                                                       tags$label(h3('Results')), 
+                                                       htmlOutput("summary"),
+                                                       plotOutput("barplot")
+                                             ) # end main panel 
+                                      ), # end column 2 
+                                      column(2, offset = 0,
+                                             imageOutput("luci")
+                                      ) # end column 3 
+                                    ), # end first row 
                          ), #tab panel: home 
-               tabPanel("About", 
-                        titlePanel("About"), 
-                        div(includeMarkdown("about.md"),
-                            align="justify")
-               ) #table panel: about
+               
+                         tabPanel("About", 
+                                  titlePanel("About"), 
+                                  div(includeMarkdown("about.md"),
+                                      align="justify")
+                        ) #table panel: about
   )#navbar page 
   
 )# fluid page 
@@ -113,17 +116,36 @@ server <- function(input, output, session){
                        Interest = interest, 
                        Year = seq(1, input$Y, by = 1))
       df %>% 
-        #mutate(Total = Principal + Interest) %>% 
         tidyr::gather(-Year, key = "category", value = "value") %>% 
         ggplot(aes(x = factor(Year), y = value, fill = category)) + 
           geom_bar(stat = "identity", position = "stack") + 
           theme_bw() + 
           theme(legend.title = element_blank(), 
-                text = element_text(size = 12)) + 
-          ylab("Balance") +
+                text = element_text(size = 16)) + 
+          ylab("Balance ($)") +
           xlab("Year")
     }
   })
+  
+  
+  output$luci <- renderImage({
+    list(src = "www/Luci2.png",
+         contentType = "image/png",
+         width = "100%",
+         height = "auto",
+         align = "right"
+    )
+
+  }, deleteFile = F)
+  
+  output$logo <- renderImage({
+    list(src = "www/logo.png",
+         contentType = "image/png",
+         width = "50%",
+         height = "auto"
+    )
+
+  }, deleteFile = F)
 }
 
 shinyApp(ui, server)
